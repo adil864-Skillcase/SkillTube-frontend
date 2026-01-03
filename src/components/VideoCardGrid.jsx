@@ -17,7 +17,7 @@ export default function VideoCardGrid({ video, index = 0 }) {
       whileHover={{ scale: 1.02, y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={() =>
-        navigate(`/player/${video.playlist_slug}?v=${video.video_id}`)
+        navigate(`/player/${video.playlist_slug}?v=${index}`)
       }
       className="video-card w-full h-40 relative group"
     >
