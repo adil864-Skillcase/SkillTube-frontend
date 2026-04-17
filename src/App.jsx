@@ -33,6 +33,14 @@ import Header from "./components/Header";
 // Utils
 import { initSounds } from "./utils/sounds";
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [pathname]);
+  return null;
+}
+
 function AppContent() {
   const location = useLocation();
 
@@ -46,6 +54,7 @@ function AppContent() {
 
   return (
     <>
+      <ScrollToTop />
       {showHeader && <Header />}
       <div className="overflow-hidden">
         <AnimatePresence mode="wait">

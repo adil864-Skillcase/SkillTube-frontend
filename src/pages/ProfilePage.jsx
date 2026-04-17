@@ -65,17 +65,6 @@ export default function ProfilePage() {
       transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
       className="min-h-screen bg-white safe-bottom"
     >
-      {/* Header */}
-      <header className="flex items-center gap-4 p-4 border-b border-gray-100">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-full"
-        >
-          <ArrowLeft className="w-5 h-5 text-[#002856]" />
-        </button>
-        <h1 className="text-xl font-bold text-[#002856]">Profile</h1>
-      </header>
-
       {/* Avatar Section */}
       <div className="flex flex-col items-center py-8">
         <div className="w-24 h-24 rounded-full bg-[#edb843] flex items-center justify-center border-4 border-[#edb843]/30">
