@@ -2,14 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Pencil, Trash2, Video, Search } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-
 import { getAllVideos, deleteVideo } from "../../api/endpoints";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import { getCategoryById } from "../../constants/categories";
+import { fetchCategories } from "../../redux/slices/categorySlice";
+import { normalizeCategories, findCategoryByAny } from "../../utils/categoryHelpers";
+import { PERMISSIONS, hasPermission } from "../../utils/permissions";
 
 export default function ManageVideos() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { items: categoryItems } = useSelector((state) => state.categories);
+  const categories = normalizeCategories(categoryItems);
+
   const [videos, setVideos] = useState([]);
   const [filteredVideos, setFilteredVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,31 +24,28 @@ export default function ManageVideos() {
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   useEffect(() => {
-    checkAdmin();
+    dispatch(fetchCategories());
+    if (!hasPermission(user, PERMISSIONS.VIDEO_EDIT) && !hasPermission(user, PERMISSIONS.VIDEO_DELETE)) {
+      navigate("/admin");
+      return;
+    }
     fetchVideos();
-  }, []);
+  }, [dispatch, navigate, user]);
 
   useEffect(() => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      setFilteredVideos(
-        videos.filter(
-          (v) =>
-            v.title.toLowerCase().includes(q) ||
-            v.playlist_name?.toLowerCase().includes(q)
-        )
-      );
-    } else {
+    if (!searchQuery) {
       setFilteredVideos(videos);
+      return;
     }
+    const q = searchQuery.toLowerCase();
+    setFilteredVideos(
+      videos.filter(
+        (v) =>
+          v.title.toLowerCase().includes(q) ||
+          v.playlist_name?.toLowerCase().includes(q)
+      )
+    );
   }, [searchQuery, videos]);
-
-  const checkAdmin = () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (user.role !== "admin") {
-      navigate("/");
-    }
-  };
 
   const fetchVideos = async () => {
     try {
@@ -58,7 +62,6 @@ export default function ManageVideos() {
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
-
     try {
       await deleteVideo(confirmDelete.id);
       toast.success("Video deleted");
@@ -77,7 +80,6 @@ export default function ManageVideos() {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-white"
     >
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4 p-4">
           <button
@@ -90,7 +92,6 @@ export default function ManageVideos() {
         </div>
       </header>
 
-      {/* Search */}
       <div className="p-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -104,14 +105,12 @@ export default function ManageVideos() {
         </div>
       </div>
 
-      {/* Loading State */}
       {loading && (
         <div className="flex justify-center py-12">
           <div className="w-8 h-8 border-2 border-[#edb843] border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {/* Videos List */}
       {!loading && (
         <div className="px-4 pb-4 space-y-2">
           {filteredVideos.length === 0 ? (
@@ -123,66 +122,49 @@ export default function ManageVideos() {
             </div>
           ) : (
             filteredVideos.map((video) => {
-              const cat = getCategoryById(video.category);
+              const cat = findCategoryByAny(categories, video.category || video.category_id);
               return (
                 <div
                   key={video.video_id}
                   className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl"
                 >
-                  {/* Thumbnail */}
                   <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                     {video.thumbnail_url ? (
-                      <img
-                        src={video.thumbnail_url}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-[#002856] to-[#003d83] flex items-center justify-center">
                         <Video className="w-6 h-6 text-white/30" />
                       </div>
                     )}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[#002856] truncate">
-                      {video.title}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {video.playlist_name}
-                    </p>
+                    <p className="font-medium text-[#002856] truncate">{video.title}</p>
+                    <p className="text-sm text-gray-500 truncate">{video.playlist_name}</p>
                     {cat && (
                       <span
                         className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full"
-                        style={{
-                          backgroundColor: `${cat.color}15`,
-                          color: cat.color,
-                        }}
+                        style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
                       >
                         {cat.name}
                       </span>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  <button
-                    onClick={() => navigate(`/admin/videos/edit/${video.video_id}`)}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
-                  >
-                    <Pencil className="w-4 h-4 text-gray-400" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setConfirmDelete({
-                        id: video.video_id,
-                        title: video.title,
-                      })
-                    }
-                    className="p-2 hover:bg-red-50 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
+                  {hasPermission(user, PERMISSIONS.VIDEO_EDIT) && (
+                    <button
+                      onClick={() => navigate(`/admin/videos/edit/${video.video_id}`)}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                    >
+                      <Pencil className="w-4 h-4 text-gray-400" />
+                    </button>
+                  )}
+                  {hasPermission(user, PERMISSIONS.VIDEO_DELETE) && (
+                    <button
+                      onClick={() => setConfirmDelete({ id: video.video_id, title: video.title })}
+                      className="p-2 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  )}
                 </div>
               );
             })
@@ -190,7 +172,6 @@ export default function ManageVideos() {
         </div>
       )}
 
-      {/* Confirm Delete Dialog */}
       <ConfirmDialog
         isOpen={!!confirmDelete}
         title="Delete Video?"

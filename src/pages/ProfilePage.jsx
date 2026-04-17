@@ -11,11 +11,17 @@ import {
 } from "lucide-react";
 
 import { logout } from "../redux/slices/authSlice";
+import { PERMISSIONS, hasPermission } from "../utils/permissions";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const showAdmin =
+    hasPermission(user, PERMISSIONS.VIDEO_CREATE) ||
+    hasPermission(user, PERMISSIONS.PLAYLIST_MANAGE) ||
+    hasPermission(user, PERMISSIONS.CATEGORY_MANAGE) ||
+    hasPermission(user, PERMISSIONS.ADMIN_MANAGE_PERMISSIONS);
 
   if (!isAuthenticated) {
     navigate("/login");
@@ -28,7 +34,7 @@ export default function ProfilePage() {
   };
 
   const menuItems = [
-    user?.role === "admin" && {
+    showAdmin && {
       icon: Settings,
       label: "Admin Dashboard",
       href: "/admin",

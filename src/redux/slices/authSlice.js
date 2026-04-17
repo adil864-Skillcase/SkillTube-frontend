@@ -2,7 +2,14 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   token: localStorage.getItem("token") || null,
-  user: JSON.parse(localStorage.getItem("user") || "null"),
+  user: (() => {
+    const parsed = JSON.parse(localStorage.getItem("user") || "null");
+    if (!parsed) return null;
+    return {
+      ...parsed,
+      permissions: Array.isArray(parsed.permissions) ? parsed.permissions : [],
+    };
+  })(),
   isAuthenticated: !!localStorage.getItem("token"),
 };
 
@@ -14,11 +21,15 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (state, action) => {
       const { token, user } = action.payload;
+      const normalizedUser = {
+        ...user,
+        permissions: Array.isArray(user?.permissions) ? user.permissions : [],
+      };
       state.token = token;
-      state.user = user;
+      state.user = normalizedUser;
       state.isAuthenticated = true;
       localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
     },
 
     logout: (state) => {
@@ -30,8 +41,14 @@ const authSlice = createSlice({
     },
 
     setUser: (state, action) => {
-      state.user = action.payload;
-      localStorage.setItem("user", JSON.stringify(action.payload));
+      const normalizedUser = {
+        ...action.payload,
+        permissions: Array.isArray(action.payload?.permissions)
+          ? action.payload.permissions
+          : [],
+      };
+      state.user = normalizedUser;
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
     },
   },
 });

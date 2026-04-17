@@ -1,53 +1,74 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { ArrowLeft, Upload, X } from "lucide-react";
-
 import {
-  getPlaylistBySlug,
   updatePlaylist,
-  uploadThumbnail,
-  getPlaylists,
+  initThumbnailUpload,
+  getPlaylistsAdmin,
 } from "../../api/endpoints";
-import { CATEGORIES } from "../../constants/categories";
+import { uploadFileToSignedUrl } from "../../api/uploadClient";
+import { fetchCategories } from "../../redux/slices/categorySlice";
+import { normalizeCategories, findCategoryByAny } from "../../utils/categoryHelpers";
+import SelectDropdown from "../../components/SelectDropdown";
 
 export default function EditPlaylist() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { items: categoryItems } = useSelector((state) => state.categories);
+  const categories = normalizeCategories(categoryItems);
   const thumbInputRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [playlist, setPlaylist] = useState(null);
-
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbPreview, setThumbPreview] = useState(null);
+  // store raw playlist data so we can re-sync categoryId when categories load
+  const rawPlaylistRef = useRef(null);
 
   useEffect(() => {
+    dispatch(fetchCategories());
     fetchPlaylist();
-  }, [id]);
+  }, [dispatch, id]);
+
+  // Re-sync categoryId whenever categories finish loading
+  useEffect(() => {
+    if (categories.length === 0 || !rawPlaylistRef.current) return;
+    const raw = rawPlaylistRef.current;
+    const matched = findCategoryByAny(categories, raw.category_id ?? raw.category);
+    if (matched) setCategoryId(String(matched.id));
+  }, [categories.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPlaylist = async () => {
     try {
-      // Get all playlists and find by ID
-      const res = await getPlaylists();
-      const found = res.data.find((p) => p.playlist_id === parseInt(id));
+      const res = await getPlaylistsAdmin();
+      const found = res.data.find((p) => p.playlist_id === parseInt(id, 10));
       if (!found) {
         toast.error("Playlist not found");
         navigate("/admin/playlists");
         return;
       }
+      rawPlaylistRef.current = found;
       setPlaylist(found);
       setName(found.name || "");
       setDescription(found.description || "");
-      setCategory(found.category || "");
+      setIsActive(found.is_active !== false); // default true
       setThumbnailUrl(found.thumbnail_url || "");
       setThumbPreview(found.thumbnail_url || null);
+      // Try to sync immediately if categories already loaded
+      if (categories.length > 0) {
+        const matched = findCategoryByAny(categories, found.category_id ?? found.category);
+        if (matched) setCategoryId(String(matched.id));
+      }
     } catch (err) {
       console.error("Failed to fetch playlist:", err);
       toast.error("Failed to load playlist");
@@ -66,7 +87,6 @@ export default function EditPlaylist() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!name.trim()) {
       toast.error("Playlist name is required");
       return;
@@ -75,18 +95,24 @@ export default function EditPlaylist() {
     setSaving(true);
     try {
       let finalThumbnailUrl = thumbnailUrl;
-
-      // Upload new thumbnail if selected
+      let thumbnailKey = null;
       if (thumbnailFile) {
-        const thumbRes = await uploadThumbnail(thumbnailFile);
-        finalThumbnailUrl = thumbRes.data.thumbnailUrl;
+        const thumbInit = await initThumbnailUpload(thumbnailFile);
+        await uploadFileToSignedUrl(thumbInit.data.uploadUrl, thumbnailFile);
+        finalThumbnailUrl = thumbInit.data.thumbnailUrl;
+        thumbnailKey = thumbInit.data.objectKey;
       }
+
+      const selectedCategory = categories.find((cat) => String(cat.id) === String(categoryId));
 
       await updatePlaylist(id, {
         name: name.trim(),
         description: description.trim() || null,
-        category: category || null,
+        category: selectedCategory?.slug || null,
+        categoryId: selectedCategory?.id || null,
         thumbnailUrl: finalThumbnailUrl || null,
+        thumbnailKey,
+        isActive,
       });
 
       toast.success("Playlist updated");
@@ -114,7 +140,6 @@ export default function EditPlaylist() {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-white"
     >
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4 p-4">
           <button
@@ -127,13 +152,9 @@ export default function EditPlaylist() {
         </div>
       </header>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="p-4 space-y-6">
-        {/* Name */}
         <div>
-          <label className="block text-[#002856] text-sm font-medium mb-2">
-            Name *
-          </label>
+          <label className="block text-[#002856] text-sm font-medium mb-2">Name *</label>
           <input
             type="text"
             value={name}
@@ -143,11 +164,8 @@ export default function EditPlaylist() {
           />
         </div>
 
-        {/* Description */}
         <div>
-          <label className="block text-[#002856] text-sm font-medium mb-2">
-            Description
-          </label>
+          <label className="block text-[#002856] text-sm font-medium mb-2">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -157,30 +175,38 @@ export default function EditPlaylist() {
           />
         </div>
 
-        {/* Category */}
         <div>
-          <label className="block text-[#002856] text-sm font-medium mb-2">
-            Category
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full bg-gray-50 text-[#002856] px-4 py-3 rounded-xl border border-gray-200 focus:border-[#edb843] outline-none"
-          >
-            <option value="">Select a category</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+          <label className="block text-[#002856] text-sm font-medium mb-2">Category</label>
+          <SelectDropdown
+            value={categoryId}
+            onChange={setCategoryId}
+            placeholder="Select a category"
+            options={categories.map((cat) => ({ value: String(cat.id), label: cat.name }))}
+          />
         </div>
 
-        {/* Thumbnail */}
+        <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+          <div className="flex-1">
+            <p className="font-semibold text-[#002856]">Visible on App</p>
+            <p className="text-sm text-gray-500">Toggle to show or hide this playlist from the main feed</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isActive ? "bg-[#002856]" : "bg-gray-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isActive ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
         <div>
-          <label className="block text-[#002856] text-sm font-medium mb-2">
-            Thumbnail
-          </label>
+          <label className="block text-[#002856] text-sm font-medium mb-2">Thumbnail</label>
           <input
             ref={thumbInputRef}
             type="file"
@@ -188,14 +214,9 @@ export default function EditPlaylist() {
             onChange={handleThumbnailSelect}
             className="hidden"
           />
-
           {thumbPreview ? (
-            <div className="relative w-full aspect-video bg-gray-100 rounded-xl overflow-hidden">
-              <img
-                src={thumbPreview}
-                className="w-full h-full object-cover"
-                alt="Thumbnail preview"
-              />
+            <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden shadow-sm">
+              <img src={thumbPreview} className="w-full h-full object-cover" alt="Thumbnail preview" />
               <button
                 type="button"
                 onClick={() => {
@@ -212,7 +233,7 @@ export default function EditPlaylist() {
             <button
               type="button"
               onClick={() => thumbInputRef.current?.click()}
-              className="w-full aspect-video bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2"
+              className="w-32 aspect-[9/16] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
             >
               <Upload className="w-8 h-8 text-gray-400" />
               <span className="text-gray-500">Select thumbnail</span>
@@ -220,7 +241,6 @@ export default function EditPlaylist() {
           )}
         </div>
 
-        {/* Submit Button */}
         <motion.button
           type="submit"
           disabled={saving}

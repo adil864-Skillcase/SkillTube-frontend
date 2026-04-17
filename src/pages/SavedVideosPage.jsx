@@ -35,19 +35,6 @@ export default function SavedVideosPage() {
       transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
       className="min-h-screen bg-white safe-bottom"
     >
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 p-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full"
-          >
-            <ArrowLeft className="w-5 h-5 text-[#002856]" />
-          </button>
-          <h1 className="text-xl font-bold text-[#002856]">Saved Videos</h1>
-        </div>
-      </header>
-
       {/* Content */}
       <main className="p-4">
         {loading ? (

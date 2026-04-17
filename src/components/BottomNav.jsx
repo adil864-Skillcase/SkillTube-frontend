@@ -1,49 +1,63 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Compass, Bookmark, User } from "lucide-react";
+import { Home, Compass, PlaySquare } from "lucide-react";
 
 import { playSound } from "../utils/sounds";
 
 const navItems = [
   { path: "/", icon: Home, label: "Home" },
-  { path: "/new", icon: Compass, label: "Explore" },
-  { path: "/profile", icon: User, label: "Profile" },
+  { path: "/search", icon: Compass, label: "Explore" }, // Explore goes to SearchPage
+  { path: "/profile/saved", icon: PlaySquare, label: "My Videos" },
 ];
 
 export default function BottomNav() {
   const location = useLocation();
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-      {/* Floating glass container */}
-      <nav className="glass-nav mx-auto max-w-md flex items-center justify-around h-16 rounded-2xl px-2">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#083262] pb-[env(safe-area-inset-bottom)]">
+      <nav className="w-full flex items-center justify-between px-2.5 py-4">
         {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive = location.pathname === path;
+          const isActive =
+            location.pathname === path ||
+            // Also highlight Explorer if typing in search
+            (path === "/search" && location.pathname.startsWith("/search")) ||
+            // Fallback highlight based on path starting logic
+            (path !== "/" && location.pathname.startsWith(path));
+
           return (
             <NavLink
               key={path}
               to={path}
               onClick={() => playSound("tap")}
-              className="relative flex flex-col items-center justify-center w-16 h-12"
+              className={`flex-1 flex flex-col items-center gap-1 ${
+                isActive ? "opacity-100" : "opacity-50"
+              }`}
             >
-              {/* Active background pill */}
-              {isActive && (
-                <motion.div
-                  layoutId="nav-pill"
-                  className="absolute inset-0 bg-[#edb843]/20 rounded-xl"
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                />
-              )}
-
               <motion.div
-                whileTap={{ scale: 0.9 }}
-                className="relative z-10 flex flex-col items-center gap-0.5"
+                whileTap={{ scale: 0.85 }}
+                className="relative flex flex-col items-center gap-1"
               >
                 <Icon
-                  className={`w-6 h-6 transition-all duration-200 ${
-                    isActive ? "text-[#edb843]" : "text-gray-400"
+                  className={`w-5 h-5 transition-colors duration-200 ${
+                    isActive ? "text-amber-300" : "text-white"
                   }`}
-                  strokeWidth={2}
+                  strokeWidth={isActive ? 2.5 : 2}
                 />
+                <span
+                  className={`text-center text-[10px] leading-3 font-['Poppins'] transition-colors duration-200 ${
+                    isActive
+                      ? "text-white font-semibold"
+                      : "text-white font-normal"
+                  }`}
+                >
+                  {label}
+                </span>
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-indicator"
+                    className="absolute -top-1 right-0 w-1.5 h-1.5 bg-amber-300 rounded-full"
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
               </motion.div>
             </NavLink>
           );

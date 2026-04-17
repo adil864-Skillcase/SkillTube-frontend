@@ -1,19 +1,30 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { ArrowLeft, Upload, X, Plus, Check } from "lucide-react";
 import {
   searchPlaylists,
   createPlaylist,
   createVideo,
-  uploadVideo,
-  uploadThumbnail,
+  initVideoUpload,
+  completeVideoUpload,
+  initThumbnailUpload,
 } from "../../api/endpoints";
-import { CATEGORIES } from "../../constants/categories";
+import { uploadFileToSignedUrl } from "../../api/uploadClient";
+import { fetchCategories } from "../../redux/slices/categorySlice";
+import { normalizeCategories } from "../../utils/categoryHelpers";
+import { PERMISSIONS, hasPermission } from "../../utils/permissions";
+import SelectDropdown from "../../components/SelectDropdown";
 
 export default function VideoUpload() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { items: categoryItems } = useSelector((state) => state.categories);
+  const { user } = useSelector((state) => state.auth);
+  const categories = normalizeCategories(categoryItems);
+
   const videoInputRef = useRef(null);
   const thumbInputRef = useRef(null);
 
@@ -24,16 +35,23 @@ export default function VideoUpload() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
   const [videoFile, setVideoFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [thumbPreview, setThumbPreview] = useState(null);
-
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Playlist autocomplete
+  useEffect(() => {
+    dispatch(fetchCategories());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!hasPermission(user, PERMISSIONS.VIDEO_CREATE)) {
+      navigate("/admin");
+    }
+  }, [navigate, user]);
+
   useEffect(() => {
     const search = async () => {
       if (playlistQuery.length < 1) {
@@ -60,7 +78,6 @@ export default function VideoUpload() {
 
   const handleCreateNewPlaylist = async () => {
     if (!playlistQuery.trim()) return;
-
     try {
       const res = await createPlaylist({ name: playlistQuery.trim() });
       setSelectedPlaylist(res.data);
@@ -89,7 +106,6 @@ export default function VideoUpload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!title || !selectedPlaylist || !videoFile) {
       toast.error("Please fill all required fields");
       return;
@@ -99,25 +115,39 @@ export default function VideoUpload() {
     setUploadProgress(0);
 
     try {
-      // Upload video
-      const videoRes = await uploadVideo(videoFile, setUploadProgress);
-      const videoUrl = videoRes.data.videoUrl;
+      const videoInit = await initVideoUpload(videoFile);
+      await uploadFileToSignedUrl(
+        videoInit.data.uploadUrl,
+        videoFile,
+        setUploadProgress
+      );
+      const videoComplete = await completeVideoUpload(videoInit.data.objectKey);
 
-      // Upload thumbnail if provided
       let thumbnailUrl = null;
+      let thumbnailKey = null;
       if (thumbnailFile) {
-        const thumbRes = await uploadThumbnail(thumbnailFile);
-        thumbnailUrl = thumbRes.data.thumbnailUrl;
+        const thumbInit = await initThumbnailUpload(thumbnailFile);
+        await uploadFileToSignedUrl(thumbInit.data.uploadUrl, thumbnailFile);
+        thumbnailUrl = thumbInit.data.thumbnailUrl;
+        thumbnailKey = thumbInit.data.objectKey;
       }
 
-      // Create video record
+      const selectedCategoryItem = categories.find(
+        (item) => item.id === Number(selectedCategory)
+      );
+
       await createVideo({
         playlistId: selectedPlaylist.playlist_id,
         title,
         description,
-        videoUrl,
+        videoUrl: videoComplete.data.videoUrl,
+        storageKey: videoComplete.data.objectKey,
+        hlsManifestPath: videoComplete.data.hlsManifestPath,
+        processingStatus: videoComplete.data.processingStatus,
         thumbnailUrl,
-        category: selectedCategory || null,
+        thumbnailKey,
+        category: selectedCategoryItem?.slug || null,
+        categoryId: selectedCategory ? Number(selectedCategory) : null,
       });
 
       toast.success("Video uploaded successfully!");
@@ -137,7 +167,6 @@ export default function VideoUpload() {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-white"
     >
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4 p-4">
           <button
@@ -150,9 +179,7 @@ export default function VideoUpload() {
         </div>
       </header>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="p-4 space-y-6">
-        {/* Title */}
         <div>
           <label className="block text-[#002856] text-sm font-medium mb-2">
             Title *
@@ -166,7 +193,6 @@ export default function VideoUpload() {
           />
         </div>
 
-        {/* Description */}
         <div>
           <label className="block text-[#002856] text-sm font-medium mb-2">
             Description
@@ -180,7 +206,6 @@ export default function VideoUpload() {
           />
         </div>
 
-        {/* Playlist with autocomplete */}
         <div className="relative">
           <label className="block text-[#002856] text-sm font-medium mb-2">
             Playlist *
@@ -197,12 +222,9 @@ export default function VideoUpload() {
             placeholder="Search or create playlist"
             className="w-full bg-gray-50 text-[#002856] px-4 py-3 rounded-xl border border-gray-200 focus:border-[#edb843] outline-none"
           />
-
           {selectedPlaylist && (
             <Check className="absolute right-4 top-10 w-5 h-5 text-green-500" />
           )}
-
-          {/* Suggestions dropdown */}
           {showSuggestions && playlistQuery && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg">
               {suggestions.map((playlist) => (
@@ -215,7 +237,6 @@ export default function VideoUpload() {
                   {playlist.name}
                 </button>
               ))}
-
               {!suggestions.some(
                 (p) => p.name.toLowerCase() === playlistQuery.toLowerCase()
               ) && (
@@ -232,26 +253,18 @@ export default function VideoUpload() {
           )}
         </div>
 
-        {/* Category */}
         <div>
           <label className="block text-[#002856] text-sm font-medium mb-2">
             Category
           </label>
-          <select
+          <SelectDropdown
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full bg-gray-50 text-[#002856] px-4 py-3 rounded-xl border border-gray-200 focus:border-[#edb843] outline-none"
-          >
-            <option value="">Select a category</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedCategory}
+            placeholder="Select a category"
+            options={categories.map((cat) => ({ value: String(cat.id), label: cat.name }))}
+          />
         </div>
 
-        {/* Video upload */}
         <div>
           <label className="block text-[#002856] text-sm font-medium mb-2">
             Video *
@@ -263,13 +276,9 @@ export default function VideoUpload() {
             onChange={handleVideoSelect}
             className="hidden"
           />
-
           {videoPreview ? (
-            <div className="relative aspect-video bg-gray-100 rounded-xl overflow-hidden">
-              <video
-                src={videoPreview}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden">
+              <video src={videoPreview} className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => {
@@ -285,7 +294,7 @@ export default function VideoUpload() {
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="w-full aspect-video bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2"
+              className="w-32 aspect-[9/16] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
             >
               <Upload className="w-8 h-8 text-gray-400" />
               <span className="text-gray-500">Select video</span>
@@ -293,7 +302,6 @@ export default function VideoUpload() {
           )}
         </div>
 
-        {/* Thumbnail upload */}
         <div>
           <label className="block text-[#002856] text-sm font-medium mb-2">
             Thumbnail
@@ -305,7 +313,6 @@ export default function VideoUpload() {
             onChange={handleThumbnailSelect}
             className="hidden"
           />
-
           {thumbPreview ? (
             <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden">
               <img
@@ -336,21 +343,15 @@ export default function VideoUpload() {
           )}
         </div>
 
-        {/* Upload button */}
         <motion.button
           type="submit"
           disabled={uploading}
           whileTap={{ scale: 0.98 }}
           className="w-full bg-[#edb843] text-[#002856] font-bold py-4 rounded-xl disabled:opacity-50"
         >
-          {uploading ? (
-            <span>Uploading... {uploadProgress}%</span>
-          ) : (
-            "Upload Video"
-          )}
+          {uploading ? <span>Uploading... {uploadProgress}%</span> : "Upload Video"}
         </motion.button>
 
-        {/* Progress bar */}
         {uploading && (
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
             <div

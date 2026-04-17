@@ -2,16 +2,17 @@ import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TrendingUp } from "lucide-react";
 
 import Header from "../components/Header";
-import SearchBar from "../components/SearchBar";
 import CategoryGrid from "../components/CategoryGrid";
 import CategoryRow from "../components/CategoryRow";
-import VideoCardGrid from "../components/VideoCardGrid";
+import FeaturedSection from "../components/FeaturedSection";
+import BottomNav from "../components/BottomNav";
 
 import { fetchPlaylists } from "../redux/slices/playlistSlice";
-import { CATEGORIES } from "../constants/categories";
+import { fetchCategories } from "../redux/slices/categorySlice";
+import { fetchFeatured } from "../redux/slices/featuredSlice";
+import { normalizeCategories } from "../utils/categoryHelpers";
 
 // Skeletons
 import PlaylistRowSkeleton from "../components/skeletons/PlaylistRowSkeleton";
@@ -20,30 +21,45 @@ export default function HomePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { items: playlists, loading } = useSelector((state) => state.playlists);
+  const { items: categoryItems } = useSelector((state) => state.categories);
+  const { section: featuredSection } = useSelector((state) => state.featured);
+  const categories = useMemo(
+    () => normalizeCategories(categoryItems),
+    [categoryItems]
+  );
 
   useEffect(() => {
     dispatch(fetchPlaylists());
+    dispatch(fetchCategories());
+    dispatch(fetchFeatured());
   }, [dispatch]);
 
-  // Get all videos with playlist slug
+  // Get all videos with playlist slug. Inherit playlist's category if video has none.
   const allVideos = useMemo(() => {
     return playlists.flatMap((p) =>
-      (p.videos || []).map((v) => ({ ...v, playlist_slug: p.slug }))
+      (p.videos || []).map((v) => ({
+        ...v,
+        playlist_slug: p.slug,
+        // If the video itself has no category, inherit from the playlist
+        category: v.category || p.category || null,
+        category_id: v.category_id || p.category_id || null,
+      }))
     );
   }, [playlists]);
 
-  // Get top 6 videos
-  const topVideos = useMemo(() => allVideos.slice(0, 6), [allVideos]);
-
-  // Group videos by category
+  // Group videos by category — index by slug AND by category_id string
   const videosByCategory = useMemo(() => {
     const grouped = {};
     allVideos.forEach((video) => {
       if (video.category) {
-        if (!grouped[video.category]) {
-          grouped[video.category] = [];
-        }
-        grouped[video.category].push(video);
+        const key = video.category.toLowerCase();
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(video);
+      }
+      if (video.category_id) {
+        const idKey = String(video.category_id);
+        if (!grouped[idKey]) grouped[idKey] = [];
+        grouped[idKey].push(video);
       }
     });
     return grouped;
@@ -51,25 +67,27 @@ export default function HomePage() {
 
   // Get categories that have videos (in original order)
   const categoriesWithVideos = useMemo(() => {
-    return CATEGORIES.filter((cat) => videosByCategory[cat.id]?.length > 0);
-  }, [videosByCategory]);
+    return categories.filter(
+      (cat) =>
+        videosByCategory[cat.slug?.toLowerCase()]?.length > 0 ||
+        videosByCategory[String(cat.id)]?.length > 0
+    );
+  }, [categories, videosByCategory]);
 
   const handleCategorySelect = (category) => {
-    navigate(`/category/${category.id}`);
+    navigate(`/category/${category.slug}`);
   };
 
   if (loading && playlists.length === 0) {
     return (
-      <div className="min-h-screen bg-white safe-bottom">
+      <div className="min-h-screen bg-gray-50 pb-[calc(64px+env(safe-area-inset-bottom))]">
         <Header />
         <main className="pb-4">
-          <div className="px-4 mb-6 mt-4">
-            <div className="h-12 bg-gray-200 rounded-xl animate-pulse" />
-          </div>
           <PlaylistRowSkeleton />
           <PlaylistRowSkeleton />
           <PlaylistRowSkeleton />
         </main>
+        <BottomNav />
       </div>
     );
   }
@@ -80,60 +98,36 @@ export default function HomePage() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
-      className="min-h-screen bg-white safe-bottom"
+      className="min-h-screen bg-white pb-[calc(80px+env(safe-area-inset-bottom))] overflow-x-hidden"
     >
-      <Header />
-
-      <main className="pb-24">
-        {/* Search */}
-        <div className="px-4 mb-6 mt-4">
-          <SearchBar placeholder="Search for Germany tips..." />
-        </div>
+      <main className="w-full flex flex-col justify-start items-start">
+        {/* Featured Section directly under header */}
+        <FeaturedSection section={featuredSection} />
 
         {/* Categories Grid */}
-        <div className="px-4 mb-6">
-          <CategoryGrid onSelect={handleCategorySelect} />
+        <div className="w-full px-4 py-6 bg-white">
+          <CategoryGrid categories={categories} onSelect={handleCategorySelect} />
         </div>
 
-        {/* Top 6 Videos */}
-        {topVideos.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center gap-2 px-4 mb-3">
-              <TrendingUp className="w-5 h-5 text-[#edb843]" />
-              <h2 className="text-lg font-bold text-[#002856]">Top Videos</h2>
-            </div>
-            <div className="flex gap-3 overflow-x-auto px-4 pb-2 hide-scrollbar">
-              {topVideos.map((video, idx) => (
-                <motion.div
-                  key={video.video_id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="shrink-0 w-28"
-                >
-                  <VideoCardGrid video={video} index={idx} />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Categories with Videos */}
+        {/* Category Rows rendering videos horizontally */}
         {categoriesWithVideos.map((category) => (
           <CategoryRow
             key={category.id}
-            categoryId={category.id}
-            videos={videosByCategory[category.id]}
+            category={category}
+            videos={
+              videosByCategory[category.slug?.toLowerCase()] || videosByCategory[String(category.id)]
+            }
           />
         ))}
 
         {allVideos.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-12 w-full">
             <p className="text-gray-500">No content available yet</p>
           </div>
         )}
       </main>
+
+      <BottomNav />
     </motion.div>
   );
 }
-

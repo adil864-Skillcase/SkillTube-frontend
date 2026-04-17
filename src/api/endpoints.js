@@ -12,8 +12,16 @@ export const loginWithPhone = (phoneNumber, name) =>
 
 export const getMe = () => api.get("/auth/me");
 
+export const searchUsers = (query) => api.get(`/auth/users/search?q=${query}`);
+export const makeUserAdmin = (targetUserId) => api.post("/auth/users/make-admin", { targetUserId });
+
+export const getDashboardStats = () => api.get("/dashboard/stats");
+
 // Playlists
 export const getPlaylists = () => api.get("/playlists");
+
+// Admin endpoint - returns ALL playlists including inactive (for admin dropdowns)
+export const getPlaylistsAdmin = () => api.get("/playlists/admin/all");
 
 export const getPlaylistBySlug = (slug) => api.get(`/playlists/${slug}`);
 
@@ -30,6 +38,29 @@ export const deletePlaylist = (playlistId) =>
 
 export const getPlaylistsByCategory = (categoryId) =>
   api.get(`/playlists/category/${categoryId}`);
+
+// Categories
+export const getCategories = (includeInactive = false) =>
+  api.get(`/categories?includeInactive=${includeInactive}`);
+
+export const createCategory = (data) => api.post("/categories", data);
+export const updateCategory = (categoryId, data) =>
+  api.put(`/categories/${categoryId}`, data);
+export const deleteCategory = (categoryId) => api.delete(`/categories/${categoryId}`);
+export const reorderCategories = (items) => api.put("/categories/reorder", { items });
+
+// Featured
+export const getHomeFeatured = () => api.get("/featured/home");
+export const updateFeaturedSection = (sectionId, data) =>
+  api.put(`/featured/${sectionId}`, data);
+
+// Admin permissions
+export const getAdminPermissions = (adminUserId) =>
+  api.get(`/admin/permissions?adminUserId=${adminUserId}`);
+export const grantAdminPermission = (adminUserId, permissionKey) =>
+  api.post("/admin/permissions/grant", { adminUserId, permissionKey });
+export const revokeAdminPermission = (adminUserId, permissionKey) =>
+  api.post("/admin/permissions/revoke", { adminUserId, permissionKey });
 
 // Videos
 export const getVideosByPlaylist = (playlistId) =>
@@ -87,21 +118,20 @@ export const checkBookmark = (videoId) =>
 
 export const toggleBookmark = (videoId) => api.post(`/bookmarks/${videoId}`);
 
-// Upload
-export const uploadVideo = (file, onProgress) => {
-  const formData = new FormData();
-  formData.append("video", file);
-  return api.post("/upload/video", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-    onUploadProgress: (e) =>
-      onProgress?.(Math.round((e.loaded * 100) / e.total)),
+// Upload (direct to S3 with backend contracts)
+export const initVideoUpload = (file) =>
+  api.post("/upload/video/init", {
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
   });
-};
 
-export const uploadThumbnail = (file) => {
-  const formData = new FormData();
-  formData.append("thumbnail", file);
-  return api.post("/upload/thumbnail", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+export const completeVideoUpload = (objectKey) =>
+  api.post("/upload/video/complete", { objectKey });
+
+export const initThumbnailUpload = (file) =>
+  api.post("/upload/thumbnail/init", {
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
   });
-};

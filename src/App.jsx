@@ -18,11 +18,17 @@ import ManagePlaylist from "./pages/admin/ManagePlaylist";
 import ManageVideos from "./pages/admin/ManageVideos";
 import EditPlaylist from "./pages/admin/EditPlaylist";
 import EditVideo from "./pages/admin/EditVideo";
+import ManageCategories from "./pages/admin/ManageCategories";
+import CreateCategory from "./pages/admin/CreateCategory";
+import EditCategory from "./pages/admin/EditCategory";
+import AdminPermissions from "./pages/admin/AdminPermissions";
+import ManageFeatured from "./pages/admin/ManageFeatured";
 import CategoryPage from "./pages/CategoryPage";
 import PlaylistDetailPage from "./pages/PlaylistDetailPage";
 
 // Components
 import BottomNav from "./components/BottomNav";
+import Header from "./components/Header";
 
 // Utils
 import { initSounds } from "./utils/sounds";
@@ -33,12 +39,14 @@ function AppContent() {
   const hideNav =
     ["/player", "/login", "/admin", "/category", "/playlist"].some((p) =>
       location.pathname.startsWith(p)
-    ) ||
-    (location.pathname.startsWith("/profile/") &&
-      location.pathname !== "/profile");
+    );
+
+  // Show the persistent global header only on the main tab pages
+  const showHeader = !hideNav;
 
   return (
     <>
+      {showHeader && <Header />}
       <div className="overflow-hidden">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
@@ -56,6 +64,11 @@ function AppContent() {
             <Route path="/admin/playlists/edit/:id" element={<EditPlaylist />} />
             <Route path="/admin/videos" element={<ManageVideos />} />
             <Route path="/admin/videos/edit/:id" element={<EditVideo />} />
+            <Route path="/admin/categories" element={<ManageCategories />} />
+            <Route path="/admin/categories/create" element={<CreateCategory />} />
+            <Route path="/admin/categories/edit/:id" element={<EditCategory />} />
+            <Route path="/admin/permissions" element={<AdminPermissions />} />
+            <Route path="/admin/featured" element={<ManageFeatured />} />
             <Route path="/category/:categoryId" element={<CategoryPage />} />
             <Route path="/playlist/:slug" element={<PlaylistDetailPage />} />
           </Routes>
