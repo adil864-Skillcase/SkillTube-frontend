@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 
 import { createCategory } from "../../api/endpoints";
 import { getCategoryIcon, CATEGORY_ICON_OPTIONS } from "../../utils/categoryIcons";
+import { triggerHaptic, triggerNotificationHaptic } from "../../utils/haptics";
 
 export default function CreateCategory() {
   const navigate = useNavigate();
@@ -16,15 +17,18 @@ export default function CreateCategory() {
   const handleCreate = async () => {
     if (!name.trim()) {
       toast.error("Category name is required");
+      triggerNotificationHaptic("error");
       return;
     }
     setSaving(true);
     try {
       await createCategory({ name, iconKey, color: "#edb843" });
       toast.success("Category created");
+      triggerNotificationHaptic("success");
       navigate("/admin/categories");
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to create category");
+      triggerNotificationHaptic("error");
     } finally {
       setSaving(false);
     }
@@ -67,7 +71,10 @@ export default function CreateCategory() {
               return (
                 <button
                   key={key}
-                  onClick={() => setIconKey(key)}
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setIconKey(key);
+                  }}
                   className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${
                     isSelected 
                       ? "bg-[#edb843] text-[#002856] shadow-sm transform scale-105 border border-[#edb843]" 

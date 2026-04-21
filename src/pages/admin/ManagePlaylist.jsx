@@ -13,6 +13,7 @@ import {
 } from "../../api/endpoints";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { fetchCategories } from "../../redux/slices/categorySlice";
+import { triggerNotificationHaptic, triggerHaptic } from "../../utils/haptics";
 import { normalizeCategories } from "../../utils/categoryHelpers";
 import { PERMISSIONS, hasPermission } from "../../utils/permissions";
 import SelectDropdown from "../../components/SelectDropdown";
@@ -79,6 +80,7 @@ export default function ManagePlaylist() {
   const handleCreate = async () => {
     if (!newName.trim()) {
       toast.error("Please enter a playlist name");
+      triggerNotificationHaptic("error");
       return;
     }
     setSaving(true);
@@ -92,12 +94,14 @@ export default function ManagePlaylist() {
         categoryId: selectedCategory?.id || null,
       });
       toast.success("Playlist created");
+      triggerNotificationHaptic("success");
       setNewName("");
       setNewCategoryId("");
       setShowCreate(false);
       fetchPlaylists();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to create playlist");
+      triggerNotificationHaptic("error");
     } finally {
       setSaving(false);
     }
@@ -108,10 +112,12 @@ export default function ManagePlaylist() {
     try {
       await deletePlaylist(confirmDelete.id);
       toast.success("Playlist deleted");
+      triggerNotificationHaptic("success");
       setExpandedPlaylist(null);
       fetchPlaylists();
     } catch (err) {
       toast.error("Failed to delete playlist");
+      triggerNotificationHaptic("error");
     } finally {
       setConfirmDelete(null);
     }
@@ -122,12 +128,14 @@ export default function ManagePlaylist() {
     try {
       await deleteVideo(confirmDelete.id);
       toast.success("Video deleted successfully");
+      triggerNotificationHaptic("success");
       const playlistId = confirmDelete.playlistId;
       const res = await getVideosByPlaylist(playlistId);
       setPlaylistVideos((prev) => ({ ...prev, [playlistId]: res.data }));
       fetchPlaylists();
     } catch (err) {
       toast.error("Failed to delete video");
+      triggerNotificationHaptic("error");
     } finally {
       setConfirmDelete(null);
     }
@@ -293,7 +301,7 @@ export default function ManagePlaylist() {
                               {video.thumbnail_url ? (
                                 <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover" />
                               ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-[#002856] to-[#003d83] flex items-center justify-center">
+                                <div className="w-full h-full bg-linear-to-br from-[#002856] to-[#003d83] flex items-center justify-center">
                                   <Video className="w-4 h-4 text-white/50" />
                                 </div>
                               )}

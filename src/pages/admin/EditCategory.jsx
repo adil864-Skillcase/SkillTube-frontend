@@ -9,6 +9,7 @@ import { updateCategory, deleteCategory, getPlaylistsByCategory } from "../../ap
 import { getCategoryIcon, CATEGORY_ICON_OPTIONS } from "../../utils/categoryIcons";
 import { fetchCategories } from "../../redux/slices/categorySlice";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import { triggerHaptic, triggerNotificationHaptic } from "../../utils/haptics";
 
 export default function EditCategory() {
   const { id } = useParams();
@@ -57,15 +58,18 @@ export default function EditCategory() {
   const handleUpdate = async () => {
     if (!name.trim()) {
       toast.error("Category name is required");
+      triggerNotificationHaptic("error");
       return;
     }
     setSaving(true);
     try {
       await updateCategory(id, { name, iconKey, color: "#edb843", isActive });
       toast.success("Category updated");
+      triggerNotificationHaptic("success");
       navigate("/admin/categories");
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to update category");
+      triggerNotificationHaptic("error");
     } finally {
       setSaving(false);
     }
@@ -75,9 +79,11 @@ export default function EditCategory() {
     try {
       await deleteCategory(id);
       toast.success("Category successfully deleted");
+      triggerNotificationHaptic("success");
       navigate("/admin/categories");
     } catch (err) {
       toast.error("Failed to delete category");
+      triggerNotificationHaptic("error");
     } finally {
       setConfirmDelete(false);
     }
@@ -157,7 +163,10 @@ export default function EditCategory() {
                <p className="text-sm text-gray-500">Toggle whether this category appears in the main app feed</p>
              </div>
              <button
-                onClick={() => setIsActive(!isActive)}
+                onClick={() => {
+                  triggerHaptic("light");
+                  setIsActive(!isActive);
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   isActive ? "bg-[#002856]" : "bg-gray-300"
                 }`}

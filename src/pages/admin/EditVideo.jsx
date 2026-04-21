@@ -13,6 +13,7 @@ import {
 import { uploadFileToSignedUrl } from "../../api/uploadClient";
 import { fetchCategories } from "../../redux/slices/categorySlice";
 import { normalizeCategories, findCategoryByAny } from "../../utils/categoryHelpers";
+import { triggerNotificationHaptic } from "../../utils/haptics";
 import SelectDropdown from "../../components/SelectDropdown";
 
 export default function EditVideo() {
@@ -92,10 +93,12 @@ export default function EditVideo() {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Video title is required");
+      triggerNotificationHaptic("error");
       return;
     }
     if (!playlistId) {
        toast.error("Please select a playlist");
+       triggerNotificationHaptic("error");
        return;
     }
 
@@ -124,10 +127,12 @@ export default function EditVideo() {
       });
 
       toast.success("Video updated");
+      triggerNotificationHaptic("success");
       navigate("/admin/videos");
     } catch (err) {
       console.error("Update error:", err);
       toast.error(err.response?.data?.error || "Failed to update video");
+      triggerNotificationHaptic("error");
     } finally {
       setSaving(false);
     }
@@ -213,7 +218,7 @@ export default function EditVideo() {
             className="hidden"
           />
           {thumbPreview ? (
-            <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden shadow-sm">
+            <div className="relative w-32 aspect-9/16 bg-gray-100 rounded-xl overflow-hidden shadow-sm">
               <img src={thumbPreview} className="w-full h-full object-cover" alt="Thumbnail preview" />
               <button
                 type="button"
@@ -231,7 +236,7 @@ export default function EditVideo() {
             <button
               type="button"
               onClick={() => thumbInputRef.current?.click()}
-              className="w-32 aspect-[9/16] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-gray-100 transition-colors"
+              className="w-32 aspect-9/16 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-gray-100 transition-colors"
             >
               <Upload className="w-5 h-5 text-gray-400" />
               <span className="text-gray-500 text-xs font-medium">Upload</span>

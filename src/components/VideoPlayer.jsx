@@ -25,6 +25,8 @@ import {
 
 import DoubleTapLike from "./DoubleTapLike";
 import { playSound } from "../utils/sounds";
+import { triggerHaptic, hapticPattern, triggerNotificationHaptic } from "../utils/haptics";
+import { getShareUrl } from "../utils/share";
 
 export default function VideoPlayer({ video, isActive, playlist, onOpenComments, onCommentCountChange, commentCount = 0 }) {
   const navigate = useNavigate();
@@ -82,30 +84,38 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
     playSound("like");
     if (!requireAuth()) return;
 
-    // Optimistic update
     const wasLiked = reaction === "like";
     const wasDisliked = reaction === "dislike";
     setReaction(wasLiked ? null : "like");
     setLikeCount((prev) => (wasLiked ? prev - 1 : prev + 1));
     if (wasDisliked) setDislikeCount((prev) => prev - 1);
 
+    // Ramp up on like, soft tap on unlike
+    if (!wasLiked) {
+      hapticPattern([
+        { style: "light" },
+        { style: "medium", delay: 70 },
+      ]);
+    } else {
+      triggerHaptic("light");
+    }
+
     try {
       const res = await likeVideo(video.video_id);
-      // Confirm with server state
       setReaction(res.data.reaction);
     } catch (err) {
-      // Revert on failure
       toast.error("Failed");
       setReaction(reaction);
       setLikeCount((prev) => (wasLiked ? prev + 1 : prev - 1));
       if (wasDisliked) setDislikeCount((prev) => prev + 1);
+      triggerNotificationHaptic("error");
     }
   };
 
   const handleDislike = async () => {
     if (!requireAuth()) return;
+    triggerHaptic("light");
 
-    // Optimistic update
     const wasLiked = reaction === "like";
     const wasDisliked = reaction === "dislike";
     setReaction(wasDisliked ? null : "dislike");
@@ -114,14 +124,13 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
 
     try {
       const res = await dislikeVideo(video.video_id);
-      // Confirm with server state
       setReaction(res.data.reaction);
     } catch (err) {
-      // Revert on failure
       toast.error("Failed");
       setReaction(reaction);
       setDislikeCount((prev) => (wasDisliked ? prev + 1 : prev - 1));
       if (wasLiked) setLikeCount((prev) => prev + 1);
+      triggerNotificationHaptic("error");
     }
   };
 
@@ -129,10 +138,19 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
     playSound("like");
     if (!requireAuth()) return;
 
-    // Optimistic update
     const wasBookmarked = isBookmarked;
     setIsBookmarked(!wasBookmarked);
     toast.success(!wasBookmarked ? "Saved!" : "Removed");
+
+    // Double-bump when saving, single light when removing
+    if (!wasBookmarked) {
+      hapticPattern([
+        { style: "medium" },
+        { style: "light", delay: 100 },
+      ]);
+    } else {
+      triggerHaptic("light");
+    }
 
     try {
       const res = await toggleBookmark(video.video_id);
@@ -140,17 +158,22 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
     } catch (err) {
       toast.error("Failed");
       setIsBookmarked(wasBookmarked);
+      triggerNotificationHaptic("error");
     }
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/player/${
-      playlist?.slug || "video"
-    }?v=${video.video_id}`;
+    triggerHaptic("light");
+    const path = `/player/${playlist?.slug || "video"}?v=${video.video_id}`;
+    const url = getShareUrl(path);
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: video.title, url });
+        await navigator.share({ 
+          title: video.title, 
+          text: `Check out "${video.title}" on SkillSnap!`,
+          url 
+        });
       } catch (err) {
         if (err.name !== "AbortError") copyLink(url);
       }
@@ -165,6 +188,7 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
   };
 
   const togglePlay = () => {
+    triggerHaptic("light");
     if (isPlaying) {
       videoRef.current?.pause();
       setIsPlaying(false);
@@ -188,6 +212,12 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
           navigate("/login");
           return;
         }
+        // Ramp light → medium → heavy on double-tap like (celebration)
+        hapticPattern([
+          { style: "light" },
+          { style: "medium", delay: 60 },
+          { style: "heavy", delay: 60 },
+        ]);
         handleLike();
       }}
       isLiked={reaction === "like"}
@@ -251,6 +281,7 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
             count={formatCount(commentCount)}
             onClick={(e) => {
               e.stopPropagation();
+              triggerHaptic("light");
               onOpenComments?.();
             }}
           />
@@ -272,6 +303,7 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
             icon={isMuted ? VolumeX : Volume2}
             onClick={(e) => {
               e.stopPropagation();
+              triggerHaptic("light");
               setIsMuted(!isMuted);
             }}
           />

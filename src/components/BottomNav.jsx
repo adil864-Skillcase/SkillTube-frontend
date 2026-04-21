@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Home, Compass, PlaySquare } from "lucide-react";
 
 import { playSound } from "../utils/sounds";
+import { triggerHaptic } from "../utils/haptics";
 
 const navItems = [
   { path: "/", icon: Home, label: "Home" },
@@ -27,7 +28,10 @@ export default function BottomNav() {
             <NavLink
               key={path}
               to={path}
-              onClick={() => playSound("tap")}
+              onClick={() => {
+                playSound("tap");
+                triggerHaptic("light");
+              }}
               className={`flex-1 flex flex-col items-center gap-1 ${
                 isActive ? "opacity-100" : "opacity-50"
               }`}

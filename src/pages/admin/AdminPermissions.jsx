@@ -12,6 +12,7 @@ import {
   makeUserAdmin
 } from "../../api/endpoints";
 import { PERMISSIONS, hasPermission } from "../../utils/permissions";
+import { triggerHaptic, hapticPattern } from "../../utils/haptics";
 
 export default function AdminPermissions() {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ export default function AdminPermissions() {
   };
 
   const handleSelectUser = async (targetUser) => {
+    triggerHaptic("medium");
     setSearchQuery("");
     setSearchResults([]);
     setSelectedUser(targetUser);
@@ -91,8 +93,18 @@ export default function AdminPermissions() {
 
   const togglePermission = async (permissionKey) => {
     if (!selectedUser) return;
+    const isGranted = permissions.includes(permissionKey);
+    // Ramp up on grant, light on revoke
+    if (isGranted) {
+      triggerHaptic("light");
+    } else {
+      hapticPattern([
+        { style: "light" },
+        { style: "medium", delay: 70 },
+      ]);
+    }
     try {
-      if (permissions.includes(permissionKey)) {
+      if (isGranted) {
         await revokeAdminPermission(selectedUser.user_id, permissionKey);
       } else {
         await grantAdminPermission(selectedUser.user_id, permissionKey);
@@ -100,6 +112,7 @@ export default function AdminPermissions() {
       loadPermissions(selectedUser.user_id);
     } catch (err) {
       toast.error("Failed to update permission");
+      triggerHaptic("heavy");
     }
   };
 
@@ -113,7 +126,10 @@ export default function AdminPermissions() {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4 p-4">
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => {
+              triggerHaptic("light");
+              navigate("/admin");
+            }}
             className="p-2 hover:bg-gray-100 rounded-full"
           >
             <ArrowLeft className="w-5 h-5 text-[#002856]" />

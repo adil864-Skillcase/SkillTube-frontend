@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronRight, FolderOpen } from "lucide-react";
 import VideoCardGrid from "./VideoCardGrid";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function PlaylistRow({ playlist, videos }) {
   const navigate = useNavigate();
@@ -18,7 +19,10 @@ export default function PlaylistRow({ playlist, videos }) {
         </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate(`/player/${playlist.slug}`)}
+          onClick={() => {
+            triggerHaptic("light");
+            navigate(`/player/${playlist.slug}`);
+          }}
           className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full text-sm text-[#002856] font-medium"
         >
           View all

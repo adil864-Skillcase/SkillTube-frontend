@@ -17,6 +17,7 @@ import { fetchCategories } from "../../redux/slices/categorySlice";
 import { normalizeCategories } from "../../utils/categoryHelpers";
 import { PERMISSIONS, hasPermission } from "../../utils/permissions";
 import SelectDropdown from "../../components/SelectDropdown";
+import { triggerNotificationHaptic, triggerHaptic } from "../../utils/haptics";
 
 export default function VideoUpload() {
   const navigate = useNavigate();
@@ -83,8 +84,10 @@ export default function VideoUpload() {
       setSelectedPlaylist(res.data);
       setShowSuggestions(false);
       toast.success("Playlist created!");
+      triggerNotificationHaptic("success");
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to create playlist");
+      triggerNotificationHaptic("error");
     }
   };
 
@@ -108,6 +111,7 @@ export default function VideoUpload() {
     e.preventDefault();
     if (!title || !selectedPlaylist || !videoFile) {
       toast.error("Please fill all required fields");
+      triggerNotificationHaptic("error");
       return;
     }
 
@@ -151,10 +155,12 @@ export default function VideoUpload() {
       });
 
       toast.success("Video uploaded successfully!");
+      triggerNotificationHaptic("success");
       navigate("/admin");
     } catch (err) {
       console.error("Upload error:", err);
       toast.error(err.response?.data?.error || "Upload failed");
+      triggerNotificationHaptic("error");
     } finally {
       setUploading(false);
     }
@@ -277,7 +283,7 @@ export default function VideoUpload() {
             className="hidden"
           />
           {videoPreview ? (
-            <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden">
+            <div className="relative w-32 aspect-9/16 bg-gray-100 rounded-xl overflow-hidden">
               <video src={videoPreview} className="w-full h-full object-cover" />
               <button
                 type="button"
@@ -294,7 +300,7 @@ export default function VideoUpload() {
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="w-32 aspect-[9/16] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
+              className="w-32 aspect-9/16 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
             >
               <Upload className="w-8 h-8 text-gray-400" />
               <span className="text-gray-500">Select video</span>
@@ -314,7 +320,7 @@ export default function VideoUpload() {
             className="hidden"
           />
           {thumbPreview ? (
-            <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden">
+            <div className="relative w-32 aspect-9/16 bg-gray-100 rounded-xl overflow-hidden">
               <img
                 src={thumbPreview}
                 className="w-full h-full object-cover"
@@ -335,7 +341,7 @@ export default function VideoUpload() {
             <button
               type="button"
               onClick={() => thumbInputRef.current?.click()}
-              className="w-32 aspect-[9/16] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1"
+              className="w-32 aspect-9/16 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1"
             >
               <Upload className="w-5 h-5 text-gray-400" />
               <span className="text-gray-500 text-xs">Thumbnail</span>

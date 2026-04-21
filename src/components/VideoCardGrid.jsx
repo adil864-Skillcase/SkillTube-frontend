@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 import { playSound } from "../utils/sounds";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function VideoCardGrid({ video, index = 0 }) {
   const navigate = useNavigate();
@@ -20,9 +21,10 @@ export default function VideoCardGrid({ video, index = 0 }) {
       whileTap={{ scale: 0.98 }}
       onClick={() => {
         playSound("tap");
+        triggerHaptic("light");
         navigate(`/player/${video.playlist_slug}?v=${index}`);
       }}
-      className="video-card w-full aspect-[9/16] relative rounded-lg overflow-hidden group flex-shrink-0"
+      className="video-card w-full aspect-9/16 relative rounded-lg overflow-hidden group shrink-0"
     >
       {video.thumbnail_url ? (
         <img
@@ -32,11 +34,11 @@ export default function VideoCardGrid({ video, index = 0 }) {
           loading="lazy"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-[#002856] to-[#003d83]" />
+        <div className="w-full h-full bg-linear-to-br from-[#002856] to-[#003d83]" />
       )}
 
       {/* Subtle bottom gradient to make text readable */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
+      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-80" />
 
       {/* Play icon centered on hover */}
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

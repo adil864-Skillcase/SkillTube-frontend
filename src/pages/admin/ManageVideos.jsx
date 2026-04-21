@@ -9,6 +9,7 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import { fetchCategories } from "../../redux/slices/categorySlice";
 import { normalizeCategories, findCategoryByAny } from "../../utils/categoryHelpers";
 import { PERMISSIONS, hasPermission } from "../../utils/permissions";
+import { triggerNotificationHaptic, triggerHaptic } from "../../utils/haptics";
 
 export default function ManageVideos() {
   const navigate = useNavigate();
@@ -65,9 +66,11 @@ export default function ManageVideos() {
     try {
       await deleteVideo(confirmDelete.id);
       toast.success("Video deleted");
+      triggerNotificationHaptic("success");
       fetchVideos();
     } catch (err) {
       toast.error("Failed to delete video");
+      triggerNotificationHaptic("error");
     } finally {
       setConfirmDelete(null);
     }
@@ -83,7 +86,10 @@ export default function ManageVideos() {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4 p-4">
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => {
+              triggerHaptic("light");
+              navigate("/admin");
+            }}
             className="p-2 hover:bg-gray-100 rounded-full"
           >
             <ArrowLeft className="w-5 h-5 text-[#002856]" />
@@ -132,7 +138,7 @@ export default function ManageVideos() {
                     {video.thumbnail_url ? (
                       <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#002856] to-[#003d83] flex items-center justify-center">
+                      <div className="w-full h-full bg-linear-to-br from-[#002856] to-[#003d83] flex items-center justify-center">
                         <Video className="w-6 h-6 text-white/30" />
                       </div>
                     )}
@@ -151,7 +157,10 @@ export default function ManageVideos() {
                   </div>
                   {hasPermission(user, PERMISSIONS.VIDEO_EDIT) && (
                     <button
-                      onClick={() => navigate(`/admin/videos/edit/${video.video_id}`)}
+                      onClick={() => {
+                        triggerHaptic("light");
+                        navigate(`/admin/videos/edit/${video.video_id}`);
+                      }}
                       className="p-2 hover:bg-gray-100 rounded-lg"
                     >
                       <Pencil className="w-4 h-4 text-gray-400" />

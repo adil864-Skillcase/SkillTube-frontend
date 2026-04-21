@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import * as Icons from "lucide-react";
 import VideoCardGrid from "./VideoCardGrid";
 import { playSound } from "../utils/sounds";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function CategoryRow({ category, videos }) {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function CategoryRow({ category, videos }) {
           whileTap={{ scale: 0.95 }}
           onClick={() => {
             playSound("tap");
+            triggerHaptic("light");
             navigate(`/category/${category.slug || category.category_id || category.id}`);
           }}
           className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full text-sm text-[#002856] font-medium"

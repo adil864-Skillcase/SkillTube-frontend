@@ -8,6 +8,7 @@ import { getPlaylistBySlug } from "../api/endpoints";
 import VideoCardGrid from "../components/VideoCardGrid";
 import { playSound } from "../utils/sounds";
 import { triggerHaptic } from "../utils/haptics";
+import { getShareUrl } from "../utils/share";
 
 const SAVED_PLAYLISTS_KEY = "skillsnap_saved_playlists";
 
@@ -71,23 +72,21 @@ export default function PlaylistDetailPage() {
   const handleShare = async () => {
     triggerHaptic("medium");
     
-    // Generate Android intent URL for deep linking without web hosting
-    const intentUrl = `intent://app/playlist/${slug}#Intent;scheme=skillsnap;package=com.skillsnap.app;end`;
-    const fallbackLink = `${window.location.origin}/playlist/${slug}`; // Used only for desktop/clipboard
+    const url = getShareUrl(`/playlist/${slug}`);
 
     if (navigator.share) {
       try {
         await navigator.share({
           title: playlist?.name || "SkillSnap Playlist",
           text: "Check out this playlist on SkillSnap!",
-          url: intentUrl,
+          url: url,
         });
       } catch {
         // user dismissed — no error needed
       }
     } else {
       try {
-        await navigator.clipboard.writeText(fallbackLink);
+        await navigator.clipboard.writeText(url);
         toast.success("Link copied to clipboard");
       } catch {
         toast.error("Could not copy link");

@@ -12,6 +12,7 @@ import {
 
 import { logout } from "../redux/slices/authSlice";
 import { PERMISSIONS, hasPermission } from "../utils/permissions";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   }
 
   const handleLogout = () => {
+    triggerHaptic("light");
     dispatch(logout());
     navigate("/");
   };
@@ -84,7 +86,10 @@ export default function ProfilePage() {
           <motion.button
             key={item.label}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(item.href)}
+            onClick={() => {
+              triggerHaptic("light");
+              navigate(item.href);
+            }}
             className="w-full flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm"
           >
             <div className="flex items-center gap-4">

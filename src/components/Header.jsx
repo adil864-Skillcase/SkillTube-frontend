@@ -4,6 +4,7 @@ import { Bell, User } from "lucide-react";
 import { useSelector } from "react-redux";
 
 import { playSound } from "../utils/sounds";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function Header() {
           whileTap={{ scale: 0.95 }}
           onClick={() => {
             playSound("tap");
+            triggerHaptic("light");
             navigate("/");
           }}
           className="text-2xl font-extrabold text-blue-950 flex items-center justify-center outline-none"
@@ -32,6 +34,7 @@ export default function Header() {
               whileTap={{ scale: 0.9 }}
               onClick={() => {
                 playSound("tap");
+                triggerHaptic("light");
                 navigate("/profile");
               }}
               className="w-9 h-9 rounded-full border border-black/10 flex items-center justify-center bg-[#edb843] cursor-pointer"
@@ -45,6 +48,7 @@ export default function Header() {
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 playSound("tap");
+                triggerHaptic("light");
                 navigate("/login");
               }}
               className="w-9 h-9 rounded-full border border-black/10 flex items-center justify-center bg-gray-100 text-[#002856]"

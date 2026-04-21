@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { getComments, addComment } from "../api/endpoints";
 
 import { playSound } from "../utils/sounds";
+import { triggerHaptic, triggerNotificationHaptic } from "../utils/haptics";
 
 //Skeletons
 import CommentSkeleton from "./skeletons/CommentSkeleton";
@@ -59,8 +60,10 @@ export default function CommentsSheet({
       onCountChange?.(comments.length + 1);
       toast.success("Comment added!");
       playSound("success");
+      triggerNotificationHaptic("success");
     } catch (err) {
       toast.error("Failed to add comment");
+      triggerNotificationHaptic("error");
     } finally {
       setLoading(false);
     }
@@ -104,7 +107,10 @@ export default function CommentsSheet({
                 Comments ({comments.length})
               </h3>
               <button
-                onClick={onClose}
+                onClick={() => {
+                  triggerHaptic("light");
+                  onClose();
+                }}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
                 <X className="w-5 h-5 text-[#002856]" />

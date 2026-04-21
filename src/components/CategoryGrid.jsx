@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
 import { playSound } from "../utils/sounds";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function CategoryGrid({ categories = [], onSelect }) {
   // User wants old UI design but preserving dynamic categories mapping
@@ -24,6 +25,7 @@ export default function CategoryGrid({ categories = [], onSelect }) {
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               playSound("tap");
+              triggerHaptic("light");
               onSelect?.(cat);
             }}
             className="flex flex-col items-center gap-1 p-2"

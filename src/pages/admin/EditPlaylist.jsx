@@ -13,6 +13,7 @@ import { uploadFileToSignedUrl } from "../../api/uploadClient";
 import { fetchCategories } from "../../redux/slices/categorySlice";
 import { normalizeCategories, findCategoryByAny } from "../../utils/categoryHelpers";
 import SelectDropdown from "../../components/SelectDropdown";
+import { triggerNotificationHaptic } from "../../utils/haptics";
 
 export default function EditPlaylist() {
   const { id } = useParams();
@@ -89,6 +90,7 @@ export default function EditPlaylist() {
     e.preventDefault();
     if (!name.trim()) {
       toast.error("Playlist name is required");
+      triggerNotificationHaptic("error");
       return;
     }
 
@@ -116,10 +118,12 @@ export default function EditPlaylist() {
       });
 
       toast.success("Playlist updated");
+      triggerNotificationHaptic("success");
       navigate("/admin/playlists");
     } catch (err) {
       console.error("Update error:", err);
       toast.error(err.response?.data?.error || "Failed to update playlist");
+      triggerNotificationHaptic("error");
     } finally {
       setSaving(false);
     }
@@ -215,7 +219,7 @@ export default function EditPlaylist() {
             className="hidden"
           />
           {thumbPreview ? (
-            <div className="relative w-32 aspect-[9/16] bg-gray-100 rounded-xl overflow-hidden shadow-sm">
+            <div className="relative w-32 aspect-9/16 bg-gray-100 rounded-xl overflow-hidden shadow-sm">
               <img src={thumbPreview} className="w-full h-full object-cover" alt="Thumbnail preview" />
               <button
                 type="button"
@@ -233,7 +237,7 @@ export default function EditPlaylist() {
             <button
               type="button"
               onClick={() => thumbInputRef.current?.click()}
-              className="w-32 aspect-[9/16] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
+              className="w-32 aspect-9/16 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
             >
               <Upload className="w-8 h-8 text-gray-400" />
               <span className="text-gray-500">Select thumbnail</span>

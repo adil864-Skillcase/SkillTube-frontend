@@ -16,6 +16,7 @@ import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { getDashboardStats } from "../../api/endpoints";
 import { PERMISSIONS, hasPermission } from "../../utils/permissions";
+import { triggerHaptic } from "../../utils/haptics";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -71,7 +72,10 @@ export default function AdminDashboard() {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4 p-4">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => {
+              triggerHaptic("light");
+              navigate("/");
+            }}
             className="p-2 hover:bg-gray-100 rounded-full"
           >
             <ArrowLeft className="w-5 h-5 text-[#002856]" />
@@ -157,7 +161,10 @@ export default function AdminDashboard() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate("/admin/upload")}
+                  onClick={() => {
+                    triggerHaptic("light");
+                    navigate("/admin/upload");
+                  }}
                   className="flex flex-col items-center justify-center gap-2 aspect-square bg-[#002856]/5 border border-[#002856]/10 rounded-2xl hover:bg-[#002856]/10 transition-all shadow-sm"
                 >
                   <Plus className="w-7 h-7 text-[#002856]" />
@@ -170,7 +177,10 @@ export default function AdminDashboard() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate("/admin/playlists")}
+                  onClick={() => {
+                    triggerHaptic("light");
+                    navigate("/admin/playlists");
+                  }}
                   className="flex flex-col items-center justify-center gap-2 aspect-square bg-[#002856]/5 border border-[#002856]/10 rounded-2xl hover:bg-[#002856]/10 transition-all shadow-sm"
                 >
                   <ListMusic className="w-7 h-7 text-[#002856]" />

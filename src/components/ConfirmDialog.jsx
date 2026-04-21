@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
+import { triggerHaptic, hapticPattern, triggerNotificationHaptic } from "../utils/haptics";
 
 export default function ConfirmDialog({
   isOpen,
@@ -48,14 +49,28 @@ export default function ConfirmDialog({
             <div className="flex gap-3">
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={onCancel}
+                onClick={() => {
+                  triggerHaptic("light");
+                  onCancel();
+                }}
                 className="flex-1 py-3 px-4 bg-gray-100 text-[#002856] font-medium rounded-xl"
               >
                 {cancelText}
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={onConfirm}
+                onClick={() => {
+                  if (isDangerous) {
+                    // Heavy impact + warning notification for destructive actions
+                    hapticPattern([
+                      { style: "heavy" },
+                      { style: "medium", delay: 80 },
+                    ]);
+                  } else {
+                    triggerNotificationHaptic("success");
+                  }
+                  onConfirm();
+                }}
                 className={`flex-1 py-3 px-4 font-medium rounded-xl ${
                   isDangerous
                     ? "bg-red-500 text-white"
