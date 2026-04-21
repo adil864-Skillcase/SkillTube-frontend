@@ -36,7 +36,8 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [progress, setProgress] = useState(0);
 
   // Engagement state
@@ -238,7 +239,17 @@ export default function VideoPlayer({ video, isActive, playlist, onOpenComments,
               );
             }
           }}
+          onWaiting={() => setIsBuffering(true)}
+          onPlaying={() => setIsBuffering(false)}
+          onCanPlay={() => setIsBuffering(false)}
         />
+
+        {/* Buffering Loader - Ultra Minimal */}
+        {isBuffering && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+            <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
 
         {/* Play Button Overlay */}
         {!isPlaying && (
