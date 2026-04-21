@@ -135,3 +135,11 @@ export const initThumbnailUpload = (file) =>
     contentType: file.type,
     fileSize: file.size,
   });
+
+export const completeThumbnailUpload = (objectKey) =>
+  api.post("/upload/thumbnail/complete", { objectKey });
+
+// Notifications
+export const broadcastNotification = (data) =>
+  api.post("/notifications/broadcast", data);
+

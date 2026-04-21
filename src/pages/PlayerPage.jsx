@@ -3,6 +3,8 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { KeepAwake } from "@capacitor-community/keep-awake";
 
 import {
   fetchPlaylistBySlug,
@@ -45,13 +47,20 @@ export default function PlayerPage() {
   useEffect(() => {
     const updateHeight = () => setScreenHeight(window.innerHeight);
     window.addEventListener("resize", updateHeight);
-    // Also listen for orientation change on mobile
     window.addEventListener("orientationchange", () => {
       setTimeout(updateHeight, 100);
     });
+
+    if (Capacitor.isNativePlatform()) {
+      KeepAwake.keepAwake().catch(console.warn);
+    }
+
     return () => {
       window.removeEventListener("resize", updateHeight);
       window.removeEventListener("orientationchange", updateHeight);
+      if (Capacitor.isNativePlatform()) {
+        KeepAwake.allowSleep().catch(console.warn);
+      }
     };
   }, []);
 

@@ -10,6 +10,7 @@ import {
   Shield,
   Star,
   Users,
+  BellRing,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -54,6 +55,10 @@ export default function AdminDashboard() {
   const canManageAdmin = hasPermission(
     user,
     PERMISSIONS.ADMIN_MANAGE_PERMISSIONS,
+  );
+  const canManageNotifications = hasPermission(
+    user,
+    PERMISSIONS.NOTIFICATION_MANAGE,
   );
 
   return (
@@ -224,6 +229,19 @@ export default function AdminDashboard() {
                   <Shield className="w-7 h-7 text-[#002856]" />
                   <span className="text-[#002856] font-semibold text-xs md:text-sm">
                     Permissions
+                  </span>
+                </motion.button>
+              )}
+              {canManageNotifications && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/admin/notifications")}
+                  className="flex flex-col items-center justify-center gap-2 aspect-square bg-[#002856]/5 border border-[#002856]/10 rounded-2xl hover:bg-[#002856]/10 transition-all shadow-sm"
+                >
+                  <BellRing className="w-7 h-7 text-[#002856]" />
+                  <span className="text-[#002856] font-semibold text-xs md:text-sm text-center leading-tight">
+                    Push<br />Alerts
                   </span>
                 </motion.button>
               )}

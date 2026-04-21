@@ -22,7 +22,7 @@ export default function Header() {
           }}
           className="text-2xl font-extrabold text-blue-950 flex items-center justify-center outline-none"
         >
-          Skill<span className="text-[#edb843]">tube</span>
+          Skill<span className="text-[#edb843]">Snap</span>
         </motion.button>
 
         {/* Actions Menu */}

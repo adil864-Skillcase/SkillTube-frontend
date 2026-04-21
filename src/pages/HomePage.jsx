@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -8,11 +8,13 @@ import CategoryGrid from "../components/CategoryGrid";
 import CategoryRow from "../components/CategoryRow";
 import FeaturedSection from "../components/FeaturedSection";
 import BottomNav from "../components/BottomNav";
+import PullToRefreshIndicator from "../components/PullToRefreshIndicator";
 
 import { fetchPlaylists } from "../redux/slices/playlistSlice";
 import { fetchCategories } from "../redux/slices/categorySlice";
 import { fetchFeatured } from "../redux/slices/featuredSlice";
 import { normalizeCategories } from "../utils/categoryHelpers";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
 
 // Skeletons
 import PlaylistRowSkeleton from "../components/skeletons/PlaylistRowSkeleton";
@@ -28,11 +30,28 @@ export default function HomePage() {
     [categoryItems]
   );
 
-  useEffect(() => {
+  const loadAll = useCallback(() => {
     dispatch(fetchPlaylists());
     dispatch(fetchCategories());
     dispatch(fetchFeatured());
   }, [dispatch]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  const handleRefresh = useCallback(() => {
+    return new Promise((resolve) => {
+      dispatch(fetchPlaylists());
+      dispatch(fetchCategories());
+      dispatch(fetchFeatured());
+      // Give dispatches time to settle before hiding the spinner
+      setTimeout(resolve, 1000);
+    });
+  }, [dispatch]);
+
+  const { pullProgress, isRefreshing, containerProps } =
+    usePullToRefresh(handleRefresh);
 
   // Get all videos with playlist slug. Inherit playlist's category if video has none.
   const allVideos = useMemo(() => {
@@ -40,7 +59,6 @@ export default function HomePage() {
       (p.videos || []).map((v) => ({
         ...v,
         playlist_slug: p.slug,
-        // If the video itself has no category, inherit from the playlist
         category: v.category || p.category || null,
         category_id: v.category_id || p.category_id || null,
       }))
@@ -81,53 +99,61 @@ export default function HomePage() {
   if (loading && playlists.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 pb-[calc(64px+env(safe-area-inset-bottom))]">
-        <Header />
         <main className="pb-4">
           <PlaylistRowSkeleton />
           <PlaylistRowSkeleton />
           <PlaylistRowSkeleton />
         </main>
-        <BottomNav />
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
-      className="min-h-screen bg-white pb-[calc(80px+env(safe-area-inset-bottom))] overflow-x-hidden"
-    >
-      <main className="w-full flex flex-col justify-start items-start">
-        {/* Featured Section directly under header */}
-        <FeaturedSection section={featuredSection} />
+    <div className="relative overflow-hidden">
+      {/* Pull-to-refresh indicator — rendered above the scrollable content */}
+      <PullToRefreshIndicator
+        pullProgress={pullProgress}
+        isRefreshing={isRefreshing}
+      />
 
-        {/* Categories Grid */}
-        <div className="w-full px-4 py-6 bg-white">
-          <CategoryGrid categories={categories} onSelect={handleCategorySelect} />
-        </div>
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
+        className="min-h-screen bg-white pb-[calc(80px+env(safe-area-inset-bottom))] overflow-x-hidden overflow-y-auto"
+        {...containerProps}
+      >
+        <main className="w-full flex flex-col justify-start items-start">
+          {/* Featured Section directly under header */}
+          <FeaturedSection section={featuredSection} />
 
-        {/* Category Rows rendering videos horizontally */}
-        {categoriesWithVideos.map((category) => (
-          <CategoryRow
-            key={category.id}
-            category={category}
-            videos={
-              videosByCategory[category.slug?.toLowerCase()] || videosByCategory[String(category.id)]
-            }
-          />
-        ))}
-
-        {allVideos.length === 0 && (
-          <div className="text-center py-12 w-full">
-            <p className="text-gray-500">No content available yet</p>
+          {/* Categories Grid */}
+          <div className="w-full px-4 py-6 bg-white">
+            <CategoryGrid categories={categories} onSelect={handleCategorySelect} />
           </div>
-        )}
-      </main>
 
-      <BottomNav />
-    </motion.div>
+          {/* Category Rows rendering videos horizontally */}
+          {categoriesWithVideos.map((category) => (
+            <CategoryRow
+              key={category.id}
+              category={category}
+              videos={
+                videosByCategory[category.slug?.toLowerCase()] ||
+                videosByCategory[String(category.id)]
+              }
+            />
+          ))}
+
+          {allVideos.length === 0 && (
+            <div className="text-center py-12 w-full">
+              <p className="text-gray-500">No content available yet</p>
+            </div>
+          )}
+        </main>
+
+        <BottomNav />
+      </motion.div>
+    </div>
   );
 }

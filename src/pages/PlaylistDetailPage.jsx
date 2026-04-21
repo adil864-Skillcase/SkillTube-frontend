@@ -7,8 +7,9 @@ import toast from "react-hot-toast";
 import { getPlaylistBySlug } from "../api/endpoints";
 import VideoCardGrid from "../components/VideoCardGrid";
 import { playSound } from "../utils/sounds";
+import { triggerHaptic } from "../utils/haptics";
 
-const SAVED_PLAYLISTS_KEY = "skilltube_saved_playlists";
+const SAVED_PLAYLISTS_KEY = "skillsnap_saved_playlists";
 
 function getSavedPlaylists() {
   try {
@@ -61,27 +62,32 @@ export default function PlaylistDetailPage() {
 
   const handleSave = () => {
     if (!playlist) return;
-    playSound("tap");
+    triggerHaptic("medium");
     const nowSaved = toggleSavedPlaylist(playlist.playlist_id);
     setIsSaved(nowSaved);
     toast.success(nowSaved ? "Playlist saved" : "Removed from saved");
   };
 
   const handleShare = async () => {
-    playSound("tap");
-    const url = `${window.location.origin}/playlist/${slug}`;
+    triggerHaptic("medium");
+    
+    // Generate Android intent URL for deep linking without web hosting
+    const intentUrl = `intent://app/playlist/${slug}#Intent;scheme=skillsnap;package=com.skillsnap.app;end`;
+    const fallbackLink = `${window.location.origin}/playlist/${slug}`; // Used only for desktop/clipboard
+
     if (navigator.share) {
       try {
         await navigator.share({
-          title: playlist?.name || "SkillTube Playlist",
-          url,
+          title: playlist?.name || "SkillSnap Playlist",
+          text: "Check out this playlist on SkillSnap!",
+          url: intentUrl,
         });
       } catch {
         // user dismissed — no error needed
       }
     } else {
       try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(fallbackLink);
         toast.success("Link copied to clipboard");
       } catch {
         toast.error("Could not copy link");
@@ -127,7 +133,7 @@ export default function PlaylistDetailPage() {
       <div className="w-full px-4 pt-3 pb-6 flex flex-col gap-2.5">
         <div className="w-full flex justify-start items-start gap-5">
           {/* Thumbnail */}
-          <div className="w-28 aspect-[9/16] shrink-0 relative rounded-xl overflow-hidden shadow-md">
+          <div className="w-28 aspect-9/16 shrink-0 relative rounded-xl overflow-hidden shadow-md">
             {playlist.thumbnail_url ? (
               <img
                 src={playlist.thumbnail_url}
@@ -135,7 +141,7 @@ export default function PlaylistDetailPage() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#002856] to-[#003d83]" />
+              <div className="w-full h-full bg-linear-to-br from-[#002856] to-[#003d83]" />
             )}
           </div>
 
